@@ -1,6 +1,6 @@
 from bs4 import BeautifulSoup
 from urllib.request import urlopen
-from urllib.error imp
+from urllib.error import HTTPError
 
 def getTitle(url):
 	try:
