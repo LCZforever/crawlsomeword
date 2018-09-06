@@ -2,6 +2,7 @@ from bs4 import BeautifulSoup
 from urllib.request import urlopen
 from urllib.error import HTTPError
 
+print("hello")
 def getTitle(url):
 	try:
 		html=urlopen(url)
