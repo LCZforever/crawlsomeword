@@ -11,7 +11,7 @@ print(soup.prettify())             #打印观察一下
 
 
 print(soup.title.string)
-
+print("hello")
 
 
 
