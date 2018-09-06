@@ -10,7 +10,7 @@ soup = BeautifulSoup(contens)   #创建beautifulsoup对象
 print(soup.prettify())             #打印观察一下
 
 
-
+print(soup.title.string)
 
 
 
