@@ -8,7 +8,7 @@ with open(filename, 'r', encoding='utf-8') as f:   #打开存放html的txt文件
 
 soup = BeautifulSoup(contens)   #创建beautifulsoup对象
 print(soup.prettify())             #打印观察一下
-
+print("helllo")
 
 print(soup.title.string)
 print("hello")
