@@ -6,6 +6,7 @@ import requests
 from requests.exceptions import RequestException
 from multiprocessing import Pool
 from jiepai_config import *
+import os
 
 def get_page_index(offset,keyword):  # 获取索引页HTML
     data = {'offset': offset,
@@ -40,7 +41,7 @@ def get_detail_page(url):   # 获取详情页HTML
         print("请求详情页出错")
         return None
 
-def get_image_content(url):
+def get_image_content(url):     # 获取图片
     try:
         response = requests.get(url)
         if response.status_code == 200:
@@ -52,8 +53,7 @@ def get_image_content(url):
         return None
 
 
-
-def parse_page_index(html):
+def parse_page_index(html):      # 从索引页获取详情页链接
     data = json.loads(html)
     if data and 'data' in data.keys():
         for item in data.get('data'):
@@ -94,7 +94,7 @@ def get_photo_page(html):           # 获取详情页中图片的链接
                     print('-'*40)'''
 
 
-def get_title_url_dict(detail_urls):
+def get_title_url_dict(detail_urls):      # 生成图片信息字典
     title_and_image_url = {}  # 标题与图片链接的字典
     for url in detail_urls:
         html = get_detail_page(url)
@@ -105,14 +105,25 @@ def get_title_url_dict(detail_urls):
     return title_and_image_url
 
 
-def download_photo(images_inf):
+def download_photo(images_inf):     # 保存并命名图片
+    path = mkdir('街拍美女图片')
     for title in images_inf.keys():
         i = 0
         for url in images_inf[title]:
-            with open(title+str(i)+'.jpg', 'wb') as f:
+            with open(path+'\\'+title+str(i)+'.jpg', 'wb') as f:
                 f.write(get_image_content(url))
                 f.close()
             i += 1
+
+
+def mkdir(dir_name):
+    path = os.getcwd() + '\\'+dir_name
+    foder = os.path.exists(path)
+    if not foder:
+        os.mkdir(path)
+        print("正在创建文件夹: " + dir_name)
+    return path
+
 
 
 
