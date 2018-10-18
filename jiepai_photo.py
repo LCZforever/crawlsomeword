@@ -7,8 +7,14 @@ from requests.exceptions import RequestException
 from multiprocessing import Pool
 from jiepai_config import *
 import os
+import pymongo
 
-def get_page_index(offset,keyword):  # 获取索引页HTML
+
+client = pymongo.MongoClient(MONGO_URL)
+db = client[MONGO_DB]
+
+
+def get_page_index(offset, keyword):  # 获取索引页HTML
     data = {'offset': offset,
             'format': 'json',
             'keyword': keyword,
@@ -47,6 +53,7 @@ def get_image_content(url):     # 获取图片
         if response.status_code == 200:
             print("正在从: "+url+" 下载图片")
             return response.content
+        print("网站进去了，照片飞了")
         return None
     except RequestException:
         print("请求图片出错")
@@ -64,6 +71,9 @@ def parse_page_index(html):      # 从索引页获取详情页链接
 def get_photo_page(html):           # 获取详情页中图片的链接
     soup = BeautifulSoup(html, 'lxml')
     if soup:
+        if not soup.title:
+            print("网站请求到了，里面的HTML飞了")
+            return None, None
         title = soup.title.text
         print(title)
         # print(soup.prettify())
@@ -81,7 +91,7 @@ def get_photo_page(html):           # 获取详情页中图片的链接
                 photo_url = [item.get('url') for item in sub_images]      # 用此方法没有重复的网址
                 for url in photo_url:
                     print(url)
-                    yield title,url
+                    yield title, url
                 print('-' * 30)
             # 通过进一步正则表达式得到
 '''         more_pattern = re.compile('url.*?:\\"(.*?)\\"', re.S)
@@ -99,21 +109,29 @@ def get_title_url_dict(detail_urls):      # 生成图片信息字典
     for url in detail_urls:
         html = get_detail_page(url)
         for title, image_url in get_photo_page(html):
-            if title not in title_and_image_url:
-                title_and_image_url[title] = []
-            title_and_image_url[title].append(image_url)
+            if title:
+                if title not in title_and_image_url:
+                    title_and_image_url[title] = []
+                title_and_image_url[title].append(image_url)
+# print(title_and_image_url)
     return title_and_image_url
 
 
 def download_photo(images_inf):     # 保存并命名图片
+    if not images_inf:
+        return
     path = mkdir('街拍美女图片')
     for title in images_inf.keys():
         i = 0
-        for url in images_inf[title]:
-            with open(path+'\\'+title+str(i)+'.jpg', 'wb') as f:
-                f.write(get_image_content(url))
-                f.close()
-            i += 1
+#        print(images_inf[title])
+        if type(images_inf[title]) == list:
+            for url in images_inf[title]:
+                with open(path+'\\'+title+str(i)+'.jpg', 'wb') as f:
+                    data = get_image_content(url)
+                    if data:
+                        f.write(data)
+                    f.close()
+                i += 1
 
 
 def mkdir(dir_name):
@@ -125,21 +143,31 @@ def mkdir(dir_name):
     return path
 
 
+def save_to_mongo(result):     # 储存到MONGODB数据库里
+    if result:
+        try:
+            if db[MONGO_TABLE].insert(result):
+                print("存储到MONGODB成功")
+                return True
+        except:
+            print("你的文件名有奇怪的符号，比如'.',':','(', 请把它们去掉后重试")
+
+    return False
 
 
-
-
-def main(offset):
+def main(offset=0):
     html = get_page_index(offset, KEYWORD)   # 获取索引页
     page = parse_page_index(html)      # 获取详情页
     images_inf = get_title_url_dict(page)   # 获取图片信息，并整合成字典
- #   print(images_inf)
+
     download_photo(images_inf)
+    save_to_mongo(images_inf)
+    print('-'*35)
+ #   print(images_inf)
 
 
-
-
-if __name__ == "__main__":    #使用多进程，别提有多牛逼了！！！
-    group = [x * 20 for x in range(GROUP_START,GROUP_STOP+1)]
+ # 使用多进程，别提有多牛逼了！！！
+if __name__ == "__main__":
+    groups = [x * 20 for x in range(GROUP_START, GROUP_STOP+1)]
     pool = Pool()
-    pool.map(main, group)
+    pool.map(main, groups)
